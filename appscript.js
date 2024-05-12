@@ -1,13 +1,16 @@
+var user=retrieveUserData();
+
 var HEADERS = {
-  "Authorization": "Basic " + Utilities.base64Encode("root" + ":" + "reset123")
+  "Authorization": "Basic " + Utilities.base64Encode(user.username+ ":" +user.password)
 };
+
 
 var SERVER = "http://134.122.4.64/cloud/ws/api/smartcounty/";
 var attachmentUrl=SERVER+"attachment/types?IsVoided=0&_=1714240431638"; 
 var usersUrl=SERVER+"system/users?IsVoided=0&_=1714384904093"; 
-var wardsUrl=SERVER+"wards?_=1714384904095"; 
-var departmentsUrl=SERVER+"county/department?_=1714384904096"; 
-var subcountiesUrl=SERVER+"subcounties?_=1714392967300";
+var wardsUrl=SERVER+"wards?IsVoided=0&_=1714384904095"; 
+var departmentsUrl=SERVER+"county/department?IsVoided=0&_=1714384904096"; 
+var subcountiesUrl=SERVER+"subcounties?IsVoided=0&_=1714392967300";
 var projectTypesUrl=SERVER+"project/types?IsVoided=0&_=1714466326993";
 var projectProgressUrl=SERVER+"project/progress/status?IsVoided=0&_=1714466326992";
 var projectMilestoneUrl=SERVER+"project/status?IsVoided=0&_=1714466326994";
@@ -17,32 +20,55 @@ var contractorsUrl=SERVER+"contractors?IsVoided=0&_=1714488272910";
 var deptSectionsUrl=SERVER+"department/sections?IsVoided=0&_=1714488272913";
 var sectorStrategiesUrl=SERVER+"sector/strategies?IsVoided=0&_=1714712317274";
 var subProgramsUrl=SERVER+"strategy/subprogramme?IsVoided=0&_=1714712317276";
-var projectsSearchUrl=SERVER+"projects?IsVoided=0&_=1714820290993";
+var projectsSearchUrl=SERVER+"projects/details?IsVoided=0";
 var projectsPostUrl=SERVER+"projects";
-//var DEPT_SECTIONS= fetchUrlData('dept_directorates');
-
-
-
-//myLoginScren();
-//addProjectsDataRangeFirst();
-addProjectsDataRangeNewFirst()
  
-addCIMESMenu() ;
-importDeptDirectorates();
-
 function getMetaData() {
-      importWards();
-      importProjectTypes();
-      importProjectStatus();
-      importProjectMilestone();
-      importDepartments();      
-      importCidp(); 
-      importFinancialYears(); 
-      importContractors(); 
-      importDeptDirectorates();
-      importSectorPrograms();
-      importSectorSubPrograms(); 
+  
+ var foundCidp=importCidp(); 
+
+  if(foundCidp){
+    
+    importWards();
+    importProjectTypes();
+    importProjectStatus();
+    importProjectMilestone();
+    importDepartments();      
+    importCidp(); 
+    importFinancialYears(); 
+    importContractors(); 
+    importDeptDirectorates();
+    importSectorPrograms();
+    importSectorSubPrograms(); 
+    addProjectObs(); 
+     addContractors();
+     addPrograms();
+     addSubPrograms();
+     importSystemProjects();  
+     addCIMESMenu() ;
+     addProjectsDataRangeNewFirst();
+     addProjectPayments() ;
+  }
+
 }
+function getUserDetails(username,password) {
+  var url=SERVER+"system/users?IsVoided=0&_=1714384904093";
+  var custheader = {
+      "Authorization": "Basic " + Utilities.base64Encode(username + ":" + password)
+    };
+
+  var options = {
+      headers: custheader,
+      muteHttpExceptions: true
+    };
+    var response = UrlFetchApp.fetch(url, options);
+    var content = response.getContentText();
+    var results = JSON.parse(content).result
+    Logger.log("UUUUUUUUUUUUUUUUUUU===");
+    Logger.log(results);
+  
+return results
+  }
 function fetchUrlData(type){
   var urlType='';
  switch(type){
@@ -149,17 +175,25 @@ sheet.getRange(2, 1, rowData.length, rowData[0].length).setValues(rowData);
 }
 function importWards() {
 var results = fetchUrlData('wards');
+var subcountyResults = fetchUrlData('subcounties');
 // Clear existing data in columns A to C of the "main" sheet
 var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("wards");
-sheet.getRange("A:D").clear(); // Assuming you want to clear columns A to C, adjust as needed
+sheet.getRange("A:E").clear(); // Assuming you want to clear columns A to C, adjust as needed
 
 // Write headers
-sheet.getRange("A1:D1").setValues([["Name","SubCountyID", "WardID","SubCounty"]]);
+sheet.getRange("A1:E1").setValues([["Name","SubCountyID", "WardID","SubCountyName","SubCounty"]]);
 
 // Write data to columns
 var rowData = [];
 results.forEach(function(item, index) {
-  rowData.push([item.Name,item.SubCountyID, item.WardID,item.SubCountyID]);
+
+  var subcountyid=item.SubCountyID;
+var subcountyName='Unknown';
+ 
+var srsubcountys=subcountyResults.filter(function (entry) { return entry.SubCountyID === subcountyid; })
+if(srsubcountys.length>0) subcountyName=srsubcountys[0].Name;
+
+  rowData.push([item.Name,item.SubCountyID, item.WardID,subcountyName,item.SubCountyID]);
 });
 sheet.getRange(2, 1, rowData.length, rowData[0].length).setValues(rowData);
 
@@ -171,15 +205,15 @@ var results = fetchUrlData('project_types');
 
 // Clear existing data in columns A to C of the "main" sheet
 var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("project_types");
-sheet.getRange("A:C").clear(); // Assuming you want to clear columns A to C, adjust as needed
+sheet.getRange("A:E").clear(); // Assuming you want to clear columns A to C, adjust as needed
 
 // Write headers
-sheet.getRange("A1:C1").setValues([["TypeName","TypeID",  "Description"]]);
+sheet.getRange("A1:E1").setValues([["TypeName","TypeID",  "Description","TypeID","TypeName"]]);
 
 // Write data to columns
 var rowData = [];
 results.forEach(function(item, index) {
-  rowData.push([item.TypeName,item.TypeID,  item.Description]);
+  rowData.push([item.TypeName,item.TypeID,  item.Description,item.TypeID,item.TypeName ]);
 });
 sheet.getRange(2, 1, rowData.length, rowData[0].length).setValues(rowData);
 
@@ -205,8 +239,9 @@ sheet.getRange(2, 1, rowData.length, rowData[0].length).setValues(rowData);
 }
 
 function importCidp() {
-    var results = fetchUrlData('cidp');
-   
+  var results=[];
+    results = fetchUrlData('cidp');
+    if(results){
     // Clear existing data in columns A to C of the "main" sheet
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("cidp");
     sheet.getRange("A:E").clear(); // Assuming you want to clear columns A to C, adjust as needed
@@ -216,14 +251,18 @@ function importCidp() {
     
     // Write data to columns
     var rowData = [];
+   
+
+
+   
     results.forEach(function(item, index) {
       rowData.push([item.CIDPName,item.CIDPID,  item.StartDate, item.EndDate,item.Theme]);
     });
     sheet.getRange(2, 1, rowData.length, rowData[0].length).setValues(rowData);
-    
+    return results.length;
     }
-    
-    
+    return 0;
+  }  
     function importFinancialYears() {
     var results = fetchUrlData('financial_year');
     
@@ -249,15 +288,15 @@ function importCidp() {
     
     // Clear existing data in columns A to C of the "main" sheet
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("contractors");
-    sheet.getRange("A:D").clear(); // Assuming you want to clear columns A to C, adjust as needed
+    sheet.getRange("A:E").clear(); // Assuming you want to clear columns A to C, adjust as needed
     
     // Write headers
-    sheet.getRange("A1:D1").setValues([["CompanyName","ContractorID",  "ContactName", "Phone"]]);
+    sheet.getRange("A1:E1").setValues([["CompanyName","ContractorID",  "ContactName", "Phone","Company"]]);
     
     // Write data to columns
     var rowData = [];
     results.forEach(function(item, index) {
-      rowData.push([item.CompanyName,item.ContractorID,  item.ContactName, item.Phone]);
+      rowData.push([item.CompanyName,item.ContractorID,  item.ContactName, item.Phone,item.CompanyName]);
     });
     sheet.getRange(2, 1, rowData.length, rowData[0].length).setValues(rowData);
     
@@ -265,18 +304,23 @@ function importCidp() {
    
     function importSectorPrograms() {
     var results = fetchUrlData('sector_programs');
-    
+    var deptResults = fetchUrlData('departments');
     // Clear existing data in columns A to C of the "main" sheet
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("sector_programs");
-    sheet.getRange("A:D").clear(); // Assuming you want to clear columns A to C, adjust as needed
+    sheet.getRange("A:E").clear(); // Assuming you want to clear columns A to C, adjust as needed
     
     // Write headers
-    sheet.getRange("A1:D1").setValues([["Programme","StrategyID", "CIDPID", "DepartmentID"]]);
+    sheet.getRange("A1:E1").setValues([["Programme","StrategyID", "CIDPID", "DepartmentID","Department"]]);
     
     // Write data to columns
     var rowData = [];
     results.forEach(function(item, index) {
-      rowData.push([item.Programme,item.StrategyID, item.CIDPID, item.DepartmentID]);
+      var deptid=item.DepartmentID;
+      var deptName='Unknown';
+
+      var srDepts=deptResults.filter(function (entry) { return entry.DepartmentID === deptid; })
+      if(srDepts.length>0) deptName=srDepts[0].Name;
+      rowData.push([item.Programme,item.StrategyID, item.CIDPID, item.DepartmentID,deptName]);
     });
     sheet.getRange(2, 1, rowData.length, rowData[0].length).setValues(rowData);
     
@@ -285,19 +329,26 @@ function importCidp() {
   
     function importSectorSubPrograms() {
     var results = fetchUrlData('sect_sub_programs');
-    
+    var strategyResults = fetchUrlData('sector_programs');
     // Clear existing data in columns A to C of the "main" sheet
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("sect_sub_programs");
-    sheet.getRange("A:D").clear(); // Assuming you want to clear columns A to C, adjust as needed
+    sheet.getRange("A:E").clear(); // Assuming you want to clear columns A to C, adjust as needed
     
     // Write headers
-    sheet.getRange("A1:D1").setValues([["SubProgramme","SubProgrammeID", "StrategyID",  "KeyOutcome"]]);
+    sheet.getRange("A1:E1").setValues([["SubProgramme","SubProgrammeID","StrategyID","KeyOutcome","Strategy"]]);
     
     // Write data to columns
     var rowData = [];
     results.forEach(function(item, index) {
-      rowData.push([item.SubProgramme,item.SubProgrammeID, item.StrategyID,  item.KeyOutcome]);
+
+      var strategyid=item.StrategyID;
+        var strategyName='Unknown';
+        var srstrategys=strategyResults.filter(function (entry) { return entry.StrategyID === strategyid; })
+        if(srstrategys.length>0) strategyName=srstrategys[0].Programme;
+
+      rowData.push([item.SubProgramme,item.SubProgrammeID, item.StrategyID,  item.KeyOutcome,strategyName]);
     });
+    if(results.length>0)
     sheet.getRange(2, 1, rowData.length, rowData[0].length).setValues(rowData);
     
     }
@@ -320,8 +371,9 @@ function importCidp() {
     results.forEach(function(item, index) {
         var deptid=item.DepartmentID;
         var deptName='Unknown';
-        if(deptid<12)
-        deptName=deptResults.filter(function (entry) { return entry.DepartmentID === deptid; })[0].Name;
+        var srDepts=deptResults.filter(function (entry) { return entry.DepartmentID === deptid; })
+        if(srDepts.length>0) deptName=srDepts[0].Name;
+        
       rowData.push([item.Name,item.SectionID, deptName, item.DepartmentID ]);
     });
     sheet.getRange(2, 1, rowData.length, rowData[0].length).setValues(rowData);
@@ -331,13 +383,16 @@ function importCidp() {
 
 function importProjectMilestone() {
 var results = fetchUrlData('BoQ_phase_milestones');
+var projTypeResults = fetchUrlData('project_types');
+
+
 
 // Clear existing data in columns A to C of the "main" sheet
 var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("BoQ_phase_milestones");
-sheet.getRange("A:E").clear(); // Assuming you want to clear columns A to C, adjust as needed
+sheet.getRange("A:F").clear(); // Assuming you want to clear columns A to C, adjust as needed
 
 // Write headers
-sheet.getRange("A1:E1").setValues([["Status","StatusID", "TypeID",  "Percentage", "Description"]]);
+sheet.getRange("A1:F1").setValues([["Status","StatusID", "TypeID",  "Percentage", "Description","ProjectType"]]);
 
 // Write data to columns
 var rowData = [];
@@ -358,7 +413,14 @@ results.sort(function (a, b) {
 
 
 results.forEach(function(item, index) {
-  rowData.push([item.Status,item.StatusID, item.TypeID,  item.Percentage, item.Description]);
+
+  var pTypeId=item.TypeID;
+var projTypeName='Unknown';
+var srProjects=projTypeResults.filter(function (entry) { return entry.TypeID === pTypeId; });
+
+if(srProjects.length>0) projTypeName=srProjects[0].TypeName;
+
+  rowData.push([item.Status,item.StatusID, item.TypeID,  item.Percentage, item.Description,projTypeName]);
 });
 sheet.getRange(2, 1, rowData.length, rowData[0].length).setValues(rowData);
 
@@ -460,13 +522,6 @@ function myLoginScren() {
   SpreadsheetApp.getUi().showSidebar(htmlOutput);
 }
 
-// Function to be called when the button is clicked
-function doSomething(username,password) {
-  // Add your desired functionality here
-  var details=getUserDetails(username,password)
-  SpreadsheetApp.getActiveSpreadsheet().toast('Button Clicked!='+details.length+'==='+username+'=pwd='+password, 'Status', 3);
-  //SpreadsheetApp.getActiveSpreadsheet().toast(details.length, 'Status', 3);
-}
 
 function hideSheet() {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -534,29 +589,14 @@ function getColumnValues(sheetName,targetColumn) {
 }
 
   
-  function getUserDetails(username,password) {
-    var url=SERVER+"system/users?IsVoided=0&_=1714384904093";
-    var custheader = {
-        "Authorization": "Basic " + Utilities.base64Encode(username + ":" + password)
-      };
 
-    var options = {
-        headers: custheader,
-        muteHttpExceptions: true
-      };
-      var response = UrlFetchApp.fetch(url, options);
-      var content = response.getContentText();
-      var results = JSON.parse(content).result
-      Logger.log("UUUUUUUUUUUUUUUUUUU===");
-      Logger.log(results);
-    
-return results
-    }
 
 function onEdit(e) {
        //filterDropDownListEdit(e);
-        //updateMetaData(e);
+       //updateMetaData(e);
        // setDropDownDataRange(e);
+       //filterMilestones(e)
+       filterDropDownBy(e) 
 }
 
 function updateMetaData(e){
@@ -639,6 +679,128 @@ function addProjectsDataRangeFa(e){
  
 }*/
 }
+
+function addContractors(){
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("contractor_reg");;
+    sheet.getRange("A1:J1").setValues([[
+        "CompanyName",
+        "ContactName",
+        "Phone",
+        "Email",
+        "Address",
+        "PostalCode",
+        "City",
+        "County",    
+        "Region",
+        "StatusUpdate"
+      ]]);
+ 
+}
+
+function addProjectObs(){
+    //http://134.122.4.64/cloud/ws/api/smartcounty/project/observations
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("me_observations");
+    //ObservationID 
+    //sheet.getRange("A:P").clear();
+      sheet.getRange("A1:P1").setValues([[
+          "ProjectName",
+          "ProjectStatus",
+          "ProgressStatus",
+          "OutputAchieved",
+          "OutputPercentage",
+          "Findings",
+          "Challenges",
+          "DelayReason",
+          "Remarks",
+          "Recommendations",
+          "ObservationDate",
+          "PostalCode",
+          "City",
+          "County",    
+          "Region",
+          "StatusUpdate"
+        ]]);
+
+        dataRangeSource=sheet.getRange("syspro!A2:A1000");
+        targetplace = getTargetPlace(1,2);
+        addColumnRule(dataRangeSource,targetplace,sheet); 
+
+        dataRangeSource=sheet.getRange("progress_status!A2:A55");
+        targetplace = getTargetPlace(3,2);
+        addColumnRule(dataRangeSource,targetplace,sheet);
+        
+        /*
+        
+        dataRangeSource=sheet.getRange("BoQ_phase_milestones!A2:A55");
+        targetplace = getTargetPlace(3,2);
+        addColumnRule(dataRangeSource,targetplace,sheet); 
+
+        dataRangeSource=sheet.getRange("BoQ_phase_milestones!A2:A55");
+        targetplace = getTargetPlace(5,2);
+        addColumnRule(dataRangeSource,targetplace,sheet); */
+        
+   
+  }
+
+  function filterMilestones(e) {
+    var sheet = e.source.getActiveSheet();
+    var editedCell = e.range;
+    var editedRow = editedCell.getRow();
+    var editedsheet =editedCell.getSheet().getSheetName(); 
+
+    // Check if the edited cell is in the category column (e.g., column A)
+    if (editedCell.getColumn() == 1 && editedsheet=='me_observations') {
+      var category = editedCell.getValue();
+     // var dataRange = sheet.getRange("A2:B" + sheet.getLastRow()); // Assuming data starts from row 2
+      var dataRange = sheet.getRange("BoQ_phase_milestones!A2:E55");// Assuming data starts from row 2
+      var data = dataRange.getValues();
+      
+      var projectYped="Q"+ editedRow;
+      var searchkey=sheet.getRange(projectYped);
+      var selProjectType=searchkey.getValue();
+   
+      var filteredItems = data.filter(function(row) {
+        return row[2] == selProjectType;
+      }).map(function(row) {
+        return row[0];
+      });
+     
+      
+      // Set data validation for the items column with the filtered items
+      var rule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(filteredItems)
+        .build();
+      
+      sheet.getRange(2, 2, filteredItems.length, 1).setDataValidation(rule);
+    }
+  }
+
+  
+ 
+  
+  /*UserType=Employee
+  ObservationID=0
+ProjectID=71
+StatusID=13
+TypeID
+OutputAchieved=12
+OutputMetric=N%2FA
+Targets=FY%3A+N%2FA+%3D+(BL%3A+N%2FA%2C+QTR1%3A+N%2FA%2C+QTR2%3A+N%2FA%2C+QTR3%3A+N%2FA%2C+QTR4%3A+N%2FA)
+CIDPKPI=KPI%3A+++%7C+Outcome%3A+Empowered+high+school+youth
+CIDPTargets=Baseline%3A++1%2C+Y1%3A+10%2C+Y2%3A+20%2C+Y3%3A+60%2C+Y4%3A+10%2C+Y5%3A+10
+OutputPercentage=33
+ObservationDate=Mon+May+06+2024+21%3A14%3A19+GMT%2B0300+(East+Africa+Time)
+Remarks=Test
+Findings=Worked
+Challenges=No+challenge
+Recommendations=Frequent+review
+ProgressStatus=Accepted
+DelayReason=
+TypeID=7
+UserType=Employee
+CreatedBy=1
+UpdatedBy=1
+VoidedBy=1*/
 
 function addProjectsDataRange(e){
         var editedRange = e.range;
@@ -928,14 +1090,68 @@ var cellRef='';
 
   }
   
-  var nextRows=countRowsInColumn('projects', cellRef);
-  nextRows=nextRows+3;
+  
   nextRows=1000;
  return  cellRef+'2:'+cellRef+nextRows;
 
 }
 
-
+function getTargetPlaceWithStartRow(editedColumn,startAtRow){
+  var cellRef='';
+    switch(editedColumn){
+      case 	1: cellRef="A";
+      break;
+     case 	2: cellRef="B";  
+      break;
+     case 	3: cellRef="C";
+      break;
+     case 	4: cellRef="D";
+      break;
+     case 	5: cellRef="E";
+      break;
+     case 	6: cellRef="F";
+      break;
+     case 	7: cellRef="G";
+      break;
+     case 	8: cellRef="H";
+      break;
+     case 	9: cellRef="I";
+      break;
+     case 	10: cellRef="J";
+      break;
+     case 	11: cellRef="K";
+      break;
+     case 	12: cellRef="L";
+      break;
+     case 	13: cellRef="M";
+      break;
+     case 	14: cellRef="N";
+      break;
+     case 	15: cellRef="O";
+      break;
+     case 	16: cellRef="P";
+      break;
+     case 	17: cellRef="Q";
+      break;
+     case 	18: cellRef="R";
+      break;
+     case 	19: cellRef="S";
+      break;
+     case 	20: cellRef="T";
+      break;
+     case 	21: cellRef="U";
+      break;
+     case 	22: cellRef="w";
+      break;
+     case 	23: cellRef="X";
+      break;
+  
+    }
+   
+    nextRows=1000;
+   return  cellRef+startAtRow+':'+cellRef+nextRows;
+  
+  }
 function countRowsInColumn(sheetName, columnName) {
   // Access the active spreadsheet
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -971,7 +1187,7 @@ function addMonitorDataRange(e){
 }
 
 function addNewProject(){
-  var payload={
+  var payload={ 
   ProjectID:0,
   TypeID:1,
   ProjectName:	"Tests",
@@ -1004,7 +1220,7 @@ function addNewProject(){
   IsFlagship	:"true",
   KPI	:"1",
   KeyOutcome	:"2",
-  ContractorID	:"1",
+  ContractorID	:"1", 
   SubCountyID	:"2",
   WardID	:"9",
   Location	:"west+kisumu",
@@ -1026,16 +1242,10 @@ function addNewProject(){
   }
 
   function postProjectData(data) {
-    
      data.forEach(function(item, index) {
       // TODO: remove column headers
       item["PercBudgetRecvd"]=100;
       item["Staging"]="Project";
-      Logger.log('ooooooooooooo=spRowNumber='+item);
-      Logger.log(item);
-      Logger.log('=========='+item);
-      Logger.log(JSON.stringify(item));
-      Logger.log('END=spRowNumber='+item);
        var rowNum=2;
        var cItem=item;
        if(cItem.spRowNumber) rowNum=cItem.spRowNumber+1;
@@ -1050,18 +1260,10 @@ function addNewProject(){
     
             var response = UrlFetchApp.fetch(url, options);
             var res=JSON.parse(response.getContentText());
-            
-             Logger.log(res); 
-             Logger.log(res.result);
-             Logger.log('ooooooooooooo=rowNum='+rowNum);
+          
                 if(res){
-                //if(res.result.hasOwnProperty('insertId')) {
                  updateStatusAfterUpload(rowNum, res.result.insertId);
-                  // updateStatusAfterUpload(spRowNumber,insertId)
-                //}
-                }
-
-                
+                }   
            Logger.log(response.getContentText()); // Log the response from the server
      
       
@@ -1069,7 +1271,8 @@ function addNewProject(){
   }  
   function updateStatusAfterUpload(spRowNumber,insertId){
     //{"startIndex":0,"result":{"fieldCount":0,"affectedRows":1,"insertId":36,"serverStatus":2,"warningCount":0,"message":"","protocol41":true,"changedRows":0}}
-    var value='uploaded:'+insertId;
+    var user=retrieveUserData();
+    var value='uploaded:'+user.username;
     setValueToCell('projects',24,spRowNumber,value);
 
   }
@@ -1085,16 +1288,104 @@ function addNewProject(){
   function addCIMESMenu() {
     var ui = SpreadsheetApp.getUi();
     ui.createMenu('E-CIMES')
+      .addItem('Refresh', 'updateMetaData')
       .addItem('Upload Project', 'showMessage')
-      .addItem('Upload Contractors', 'insertTimestamp')
-      .addItem('Upload Payments', 'insertTimestamp')
-      .addItem('Update Meta Data', 'updateMetaData')
+      .addItem('Upload Contractors', 'saveContrators')
+      .addItem('Upload M&E ', 'saveMEObservations')
+      .addItem('Upload Payments', 'insertTimestamp')     
+      .addItem('Upload Departmental Strategies', 'saveSectorStrategies')
+      .addItem('Upload Sector Programs', 'saveSectorPrograms')
+       .addItem('Upload Payements', 'saveProjectPayments')
       .addToUi();
   }
  
+  // Function to be called when the button is clicked
+function doSomething(username,password) {
+  // Add your desired functionality here
+  //var details=getUserDetails(username,password)
+  
+  storeUserData( username,password) 
+
+  var foundCidp=importCidp(); 
+  if(foundCidp){
+    SpreadsheetApp.getActiveSpreadsheet().toast('Login Successful', 'Status', 3);
+  
+  }   else {
+  
+    
+    SpreadsheetApp.getActiveSpreadsheet().toast('Login Failed', 'Status', 3);
+  
+  }
+ 
+
+
+    //setCookie(cookieName, cookieValue, expirationDays);
+    //return setCookie(cookieName, cookieValue, expirationDays);
+  //====
+  
+  //SpreadsheetApp.getActiveSpreadsheet().toast(details.length, 'Status', 3);
+}
+
+
+
+  function setLogin(){
+    //handleButtonClick();
+    //dodGet()
+    retrieveUserData();
+  }
+
+  function setCookie(name, value, expirationDays) {
+    var expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + expirationDays);
+  
+    var cookie = name + "=" + encodeURIComponent(value) + ";expires=" + expirationDate.toUTCString() + ";path=/";
+    return ContentService.createTextOutput().appendHeader('Set-Cookie', cookie).setMimeType(ContentService.MimeType.TEXT);
+  }
+
+  function setLocalStorageVariable(key, value) {
+    PropertiesService.getUserProperties().setProperty(key, value);
+  }
+  
+
+  function storeUserData( username,password) {
+    var username = username;
+    var userEmail = password;
+  
+    setLocalStorageVariable("username", username);
+    setLocalStorageVariable("password", password);
+  
+    Logger.log("User data stored in local storage variables.");
+  }
+  
+  function getLocalStorageVariable(key) {
+    return PropertiesService.getUserProperties().getProperty(key);
+  }
+
+  function dodGet() {
+    // Store user data when the web app is accessed
+   // storeUserData();
+  
+    // Retrieve and display user data
+   
+  
+    return ContentService.createTextOutput("User data stored and retrieved successfully.");
+  }
+  function retrieveUserData() {
+    var storedUsername = getLocalStorageVariable("username");
+    var storedpassword = getLocalStorageVariable("password");
+  
+    if (storedUsername && storedpassword) {
+      //Logger.log("Username: " + storedUsername);
+     // Logger.log("storedpassword: " + storedpassword);
+    } else {
+     // Logger.log("User data not found.");
+    }
+    return {username:storedUsername, password:storedpassword}
+  }
+  
 function updateMetaData(){
   getMetaData();
-  SpreadsheetApp.getActiveSpreadsheet().toast('System Meta Data Has Been Update', 'Message', 3000);
+  SpreadsheetApp.getActiveSpreadsheet().toast('System Refreshed', 'Message', 3000);
 }
 
 
@@ -1112,24 +1403,89 @@ function updateMetaData(){
     SpreadsheetApp.getActiveSpreadsheet().toast('Project Data Uploaded', 'Message', 3000);
   }
   
+  function saveContrators() {
+    var newData= fetchContractors();
+    postContractorData(newData);
+    getMetaData();
+     SpreadsheetApp.getActiveSpreadsheet().toast('Contractor List Uploaded', 'Message', 3000);
+   }
+ 
   
+ function fetchContractors() {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('contractor_reg');
+    var range = sheet.getDataRange();
+    //var range = sheet.getRange("A1:X1");
+    var values = range.getValues();
+    var headers = values[0];
+    var dataArray = [];
+    // Iterate over each row starting from the second row (index 1)
+    for (var i = 1; i < values.length; i++) {
+      var row = values[i];
+      var dataObject = {};
+      // Iterate over each column
+      for (var j = 0; j < headers.length; j++) {
+        var header = headers[j];
+        var value = row[j];
+        dataObject[header] =  value ;
+      }
+      dataObject["spRowNumber"] =  i ;
+      if(!isEmpty(dataObject.CompanyName) && !isEmpty(dataObject.StatusUpdate) && isNotUploaded(dataObject.StatusUpdate))
+      dataArray.push(dataObject);
+    }
+    return dataArray;
+  }
+
+
+  function postContractorData(data) {
+    data.forEach(function(item, index) {
+     item["ProductService"]=68120; 
+      var rowNum=2;
+      var cItem=item;
+      if(cItem.spRowNumber) rowNum=cItem.spRowNumber+1;
+     var url = SERVER+"contractors";
+       var options = {
+             headers: HEADERS,
+             method: "post",
+             contentType: "application/json",
+             payload: JSON.stringify(item),
+             muteHttpExceptions: true
+           };
+           var response = UrlFetchApp.fetch(url, options);
+           var res=JSON.parse(response.getContentText());
+         
+               if(res){
+                var user=retrieveUserData();
+                var value='uploaded:'+user.username;
+                setValueToCell('contractor_reg',10,rowNum,value);
+               }   
+          Logger.log(response.getContentText()); // Log the response from the server  
+   });
+ }  
+
   function importSystemProjects() {
-    /*var results = fetchUrlData('existing_projects');
-    
+    var results = fetchUrlData('existing_projects');
+    // syspro ProjectID TypeID TenderNum ProjectName DepartmentID FinYearID CIDPID Status ProjStatus WardID ContractorID SubCountyID WardID
     // Clear existing data in columns A to C of the "main" sheet
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("system_data");
-    sheet.getRange("A:C").clear(); // Assuming you want to clear columns A to C, adjust as needed
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("syspro");
+    sheet.getRange("A:L").clear(); // Assuming you want to clear columns A to C, adjust as needed
     
-    // Write headers
-    sheet.getRange("A1:C1").setValues([["ProjectName","ProjectID",  "Description"]]);
+    // Write headersProjStatus
+    sheet.getRange("A1:L1").setValues([[
+"ProjectName","ProjectID", "TypeID", "DepartmentID","FinYearID", "ContractorID","Status","WardID", "SubCountyID","ProjStatus","TotAmountPaid","RecPercPaid"
+
+    ]]);
     
     // Write data to columns ProjectName Description ProjectID
     var rowData = [];
     results.forEach(function(item, index) {
-      rowData.push([item.ProjectName,item.ProjectID,  item.Description]);
+      rowData.push([
+item.ProjectName,item.ProjectID,item.TypeID,item.DepartmentID,item.FinYearID,item.ContractorID,item.Status,item.WardID,item.SubCountyID, item.ProjStatus,item.TotAmountPaid, item.RecPercPaid
+
+      ]);
     });
+     if(results.length>0)
     sheet.getRange(2, 1, rowData.length, rowData[0].length).setValues(rowData);
-    */
+    
   }
   
   
@@ -1252,82 +1608,106 @@ function updateMetaData(){
   }
   function addProjectsDataRangeNewFirst(){
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("projects");
-    sheet.getRange("A1:X1").setValues([[
+    sheet.getRange("A:T").clear();
+    sheet.getRange("A:T").clearDataValidations();
+    sheet.getRange("A5:T5").setValues([[
           "CIDP",
           "FinYear",
-          "Department",
-          "Section",
-          "Strategy",
-          "SubProgramme",
-          "ProjectType",
+          "DepartmentalStrategies",
+          "Programme",
           "ProjectName",
           "Description",
           "IsFlagship",
-          "Status",
+          "ProjectType",
           "MilestoneStatus",
-          "StartDate",
-          "EndDate",
-          "Contractor",
+          "Status",         
           "TenderNum",
           "ContractSum",
           "Budget",
           "Funding",
+          "Contractor",
           "SubCounty",
           "Ward",
           "Location",
           "CreatedOn",
           "StatusUpdate"
         ]]);
-  
-        dataRangeSource=sheet.getRange("cidp!A2:A55");
-        targetplace = getTargetPlace(1,2);
-        addColumnRule(dataRangeSource,targetplace,sheet);
+      
         
-        dataRangeSource=sheet.getRange("financial_year!A2:A55");
-        targetplace = getTargetPlace(2,2);
-        addColumnRule(dataRangeSource,targetplace,sheet);
-        
-        dataRangeSource=sheet.getRange("dept_directorates!C2:C55"); 
-        targetplace = getTargetPlace(3,2);
-        addColumnRule(dataRangeSource,targetplace,sheet);
+      targetplace = 'B2';
+      dataRangeSource=sheet.getRange("dept_directorates!C2:C1000"); 
+      addColumnRule(dataRangeSource,targetplace,sheet);
 
-        dataRangeSource=sheet.getRange("dept_directorates!A2:A55"); 
-        targetplace = getTargetPlace(4,2);
-        addColumnRule(dataRangeSource,targetplace,sheet);
-        
-        dataRangeSource=sheet.getRange("sector_programs!A2:A55");
-        targetplace = getTargetPlace(5,2);
-        addColumnRule(dataRangeSource,targetplace,sheet);
-        
-        dataRangeSource=sheet.getRange("sect_sub_programs!A2:A55");
-        targetplace = getTargetPlace(6,2);
-        addColumnRule(dataRangeSource,targetplace,sheet);
-        
-        dataRangeSource=sheet.getRange("project_types!A2:A55");
-        targetplace = getTargetPlace(7,2);
-        addColumnRule(dataRangeSource,targetplace,sheet); 
-        
-        dataRangeSource=sheet.getRange("progress_status!A2:A55");
-        targetplace = getTargetPlace(11,2);
-        addColumnRule(dataRangeSource,targetplace,sheet);
-        
-        dataRangeSource=sheet.getRange("BoQ_phase_milestones!A2:A55");
-        targetplace = getTargetPlace(12,2);
-        addColumnRule(dataRangeSource,targetplace,sheet); 
-        
-        dataRangeSource=sheet.getRange("contractors!A2:A55");
-        targetplace = getTargetPlace(15,2);
-        addColumnRule(dataRangeSource,targetplace,sheet);
-        
-        dataRangeSource=sheet.getRange("wards!A2:A55");
-        targetplace = getTargetPlace(20,2);
-        addColumnRule(dataRangeSource,targetplace,sheet);
-        
-        dataRangeSource=sheet.getRange("wards!A2:A55");
-        targetplace = getTargetPlace(21,2);
-        addColumnRule(dataRangeSource,targetplace,sheet);           
+      targetplace = 'B3';
+      dataRangeSource=sheet.getRange("dept_directorates!A2:A1000"); 
+      addColumnRule(dataRangeSource,targetplace,sheet);
+
+      var startAtRow=6;
+
+      dataRangeSource=sheet.getRange("cidp!A2:A55");
+      targetplace = getTargetPlaceWithStartRow(1,startAtRow);
+      addColumnRule(dataRangeSource,targetplace,sheet);
+      
+     /* dataRangeSource=sheet.getRange("financial_year!A2:A55");
+      targetplace = getTargetPlaceWithStartRow(2,startAtRow);
+      addColumnRule(dataRangeSource,targetplace,sheet);
+
+     dataRangeSource=sheet.getRange("sector_programs!A2:A1000");
+      targetplace = getTargetPlaceWithStartRow(3,startAtRow);
+      addColumnRule(dataRangeSource,targetplace,sheet);
+
+     dataRangeSource=sheet.getRange("sect_sub_programs!A2:A1000");
+      targetplace = getTargetPlaceWithStartRow(4,startAtRow);
+      addColumnRule(dataRangeSource,targetplace,sheet);*/
+/**
+ *         "CIDP",1
+          "FinYear",2
+          "DepartmentalStrategies",3
+          "Programme",4
+          "ProjectName",5
+           "Description",6
+          "IsFlagship",7
+          */
+      dataRangeSource=sheet.getRange("project_types!A2:A55");
+      targetplace = getTargetPlaceWithStartRow(8,startAtRow);
+      addColumnRule(dataRangeSource,targetplace,sheet); 
+
+      /*dataRangeSource=sheet.getRange("BoQ_phase_milestones!A2:A55");
+      targetplace = getTargetPlaceWithStartRow(9,startAtRow);
+      addColumnRule(dataRangeSource,targetplace,sheet); */
+      
+      dataRangeSource=sheet.getRange("progress_status!A2:A55");
+      targetplace = getTargetPlaceWithStartRow(10,startAtRow);
+      addColumnRule(dataRangeSource,targetplace,sheet);
+       /*
+          "ProjectType",8
+          "MilestoneStatus",9
+          "Status", 10       
+          "TenderNum",11
+          "ContractSum",12
+          "Budget",13
+          */    
+      dataRangeSource=sheet.getRange("contractors!A2:A1000");
+      targetplace = getTargetPlaceWithStartRow(15,startAtRow);
+      addColumnRule(dataRangeSource,targetplace,sheet);
+      
+      dataRangeSource=sheet.getRange("wards!D2:D55");
+      targetplace = getTargetPlaceWithStartRow(16,startAtRow);
+      addColumnRule(dataRangeSource,targetplace,sheet);
+      
+      /*dataRangeSource=sheet.getRange("wards!A2:A55");
+      targetplace = getTargetPlaceWithStartRow(17,startAtRow);
+      addColumnRule(dataRangeSource,targetplace,sheet);           
     
        
+          "Funding",14
+          "Contractor",15
+          "SubCounty",16
+          "Ward",17
+          "Location",18
+          "CreatedOn",19
+          "StatusUpdate"20
+          */
       
   }
 
@@ -1383,17 +1763,13 @@ function filterDropDownListEdit(e) {
     var cellSelectedData= [];
     
 
-    Logger.log('directorates BBBBBBBBBBBBBBBBBBBBBBB');
-    Logger.log(directorates);
+
     newOptions=directorates.filter(function (entry) { return entry.DepartmentName === selectedValue; });
     Logger.log(newOptions);
        newOptions.forEach(function(item, index) {
       cellSelectedData.push([item.Name]);
       });
-         Logger.log('Entered Insidet Data Each Object dataValue ');
-        Logger.log('-------------------------------');
-        Logger.log(cellSelectedData);
-        Logger.log('Entered Outside Data Endo of Object EDDDDDDDD');
+     
 
 
     // Define options for Dropdown2 based on the selected value in Dropdown1
@@ -1410,4 +1786,719 @@ function filterDropDownListEdit(e) {
     const rule = SpreadsheetApp.newDataValidation().requireValueInList(cellSelectedData).build();
     dropdown2Cell.setDataValidation(rule);
   }
+}
+
+
+function saveMEObservations() {
+  var newData= fetchMEObservations();
+  postMEObservationsData(newData);
+  getMetaData();
+  
+   SpreadsheetApp.getActiveSpreadsheet().toast('M&E Observation List Uploaded', 'Message', 3000);
+ }
+
+
+function fetchMEObservations() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('me_observations');
+  var range = sheet.getDataRange();
+  //var range = sheet.getRange("A1:X1");
+  var values = range.getValues();
+  var headers = values[0];
+  var dataArray = [];
+  // Iterate over each row starting from the second row (index 1)
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+    var dataObject = {};
+    // Iterate over each column
+    for (var j = 0; j < headers.length; j++) {
+      var header = headers[j];
+      var value = row[j];
+      dataObject[header] =  value ;
+    }
+    dataObject["spRowNumber"] =  i ;
+    if(!isEmpty(dataObject.ProjectID) && !isEmpty(dataObject.StatusUpdate) && isNotUploaded(dataObject.StatusUpdate))
+    dataArray.push(dataObject);
+  }
+  return dataArray;
+}
+
+
+function postMEObservationsData(data) {
+  data.forEach(function(item, index) {
+   item["ProductService"]=68120; 
+    var rowNum=2;
+    var cItem=item;
+    if(cItem.spRowNumber) rowNum=cItem.spRowNumber+1;
+   var url = SERVER+"project/observations";
+     var options = {
+           headers: HEADERS,
+           method: "post",
+           contentType: "application/json",
+           payload: JSON.stringify(item),
+           muteHttpExceptions: true
+         };
+         var response = UrlFetchApp.fetch(url, options);
+         var res=JSON.parse(response.getContentText());
+         Logger.log(response.getContentText());
+         Logger.log(res);
+         Logger.log("ldlldlldlldld");
+       
+             if(res){
+              var user=retrieveUserData();
+              var value='uploaded:'+user.username;
+              setValueToCell('me_observations',16,rowNum,value);
+             }   
+        Logger.log(response.getContentText()); // Log the response from the server  
+ });
+}  
+
+
+function addPrograms(){
+  //http://134.122.4.64/cloud/ws/api/smartcounty/project/observations
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Departmental_strategies");
+
+    sheet.getRange("A7:G7").setValues([[
+        "Programme",
+        "NeedsPriorities",
+        "Objectives",
+        "Outcomes",
+        "Strategies",
+        "Remarks",
+        "StatusUpdate"
+      ]]);
+
+
+      var targetplace='';
+      dataRangeSource=sheet.getRange("cidp!A2:A55");
+      targetplace = 'B2';
+      addColumnRule(dataRangeSource,targetplace,sheet);
+    
+      targetplace = 'B3';
+      dataRangeSource=sheet.getRange("dept_directorates!C2:C55"); 
+      addColumnRule(dataRangeSource,targetplace,sheet);
+
+      targetplace = 'B4';
+      dataRangeSource=sheet.getRange("dept_directorates!A2:A55"); 
+      addColumnRule(dataRangeSource,targetplace,sheet);
+    
+      
+ 
+}
+
+function addSubPrograms(){
+  //http://134.122.4.64/cloud/ws/api/smartcounty/project/observations
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("sector_sub_programs");
+
+    sheet.getRange("A5:L5").setValues([[
+        "SubProgramme",
+        "KeyOutcome",
+        "KPI",
+        "Baseline",
+        "Yr1Targets",
+        "Yr2Targets",
+        "Yr3Targets",
+        "Yr4Targets",
+        "Yr5Budget",
+        "TotalBudget",
+        "Remarks",
+        "StatusUpdate"
+      ]]);
+
+      var targetplace='B3';
+      dataRangeSource=sheet.getRange("sector_programs!A2:A55");
+      addColumnRule(dataRangeSource,targetplace,sheet);
+    
+      
+ 
+}
+
+function saveSectorStrategies() {
+  var newData= fetchSectorStrategies();
+  postSectorStrategiesData(newData);
+  
+  getMetaData();
+ 
+   SpreadsheetApp.getActiveSpreadsheet().toast('Sector Strategies List Uploaded', 'Message', 3000);
+ }
+
+
+function fetchSectorStrategies() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Departmental_strategies');
+  var range = sheet.getDataRange();
+  //var range = sheet.getRange("A1:X1");
+  var CIDPID=sheet.getRange('I2').getValue();
+  var DepartmentID=sheet.getRange('I3').getValue();
+  var SectionID=sheet.getRange('I4').getValue();
+
+  var values = range.getValues();
+  var headers = values[6];
+  var dataArray = [];
+
+  // Iterate over each row starting from the second row (index 1)
+  for (var i = 7; i < values.length; i++) {
+    var row = values[i];
+    var dataObject = {};
+    // Iterate over each column
+    for (var j = 0; j < headers.length; j++) {
+      var header = headers[j];
+      var value = row[j];
+      dataObject[header] =  value ;
+    }
+    dataObject["spRowNumber"] =  i ;
+    dataObject["CIDPID"] =  CIDPID ;
+    dataObject["DepartmentID"] =  DepartmentID ;
+    dataObject["SectionID"] =  SectionID ;
+    if(!isEmpty(dataObject.Programme) && !isEmpty(dataObject.StatusUpdate) && isNotUploaded(dataObject.StatusUpdate))
+    dataArray.push(dataObject);
+  }
+  return dataArray;
+}
+
+
+function postSectorStrategiesData(data) {
+  data.forEach(function(item, index) {
+   item["ProductService"]=68120; 
+    var rowNum=2;
+    var cItem=item;
+    if(cItem.spRowNumber) rowNum=cItem.spRowNumber+1;
+   var url = SERVER+"sector/strategies";
+     var options = {
+           headers: HEADERS,
+           method: "post",
+           contentType: "application/json",
+           payload: JSON.stringify(item),
+           muteHttpExceptions: true
+         };
+         var response = UrlFetchApp.fetch(url, options);
+         var res=JSON.parse(response.getContentText());
+         Logger.log(response.getContentText());
+         Logger.log(res);
+         Logger.log("ldlldlldlldld");
+       
+             if(res){
+              var user=retrieveUserData();
+              var value='uploaded:'+user.username;
+              setValueToCell('Departmental_strategies',7,rowNum,value);
+             }   
+        Logger.log(response.getContentText()); // Log the response from the server  
+ });
+} 
+
+function saveSectorPrograms() {
+  var newData= fetchSectorPrograms();
+  postSectorProgramsData(newData);
+  getMetaData();
+   SpreadsheetApp.getActiveSpreadsheet().toast('Sector Programs List Uploaded', 'Message', 3000);
+ }
+
+
+function fetchSectorPrograms() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('sector_sub_programs');
+  var range = sheet.getDataRange();
+  //var range = sheet.getRange("A1:X1");
+  var StrategyID=sheet.getRange('N3').getValue();
+
+
+  var values = range.getValues();
+  var headers = values[4];
+  var dataArray = [];
+
+  // Iterate over each row starting from the second row (index 1)
+  for (var i = 5; i < values.length; i++) {
+    var row = values[i];
+    var dataObject = {};
+    // Iterate over each column
+    for (var j = 0; j < headers.length; j++) {
+      var header = headers[j];
+      var value = row[j];
+      dataObject[header] =  value ;
+    }
+    dataObject["spRowNumber"] =  i ;
+    dataObject["StrategyID"] =  StrategyID ;
+ 
+    if(!isEmpty(dataObject.SubProgramme) && !isEmpty(dataObject.StatusUpdate) && isNotUploaded(dataObject.StatusUpdate))
+    dataArray.push(dataObject);
+  }
+  return dataArray;
+}
+
+
+function postSectorProgramsData(data) {
+  data.forEach(function(item, index) {
+   item["ProductService"]=68120; 
+    var rowNum=2;
+    var cItem=item;
+    if(cItem.spRowNumber) rowNum=cItem.spRowNumber+1;
+   var url = SERVER+"strategy/subprogramme";
+     var options = {
+           headers: HEADERS,
+           method: "post",
+           contentType: "application/json",
+           payload: JSON.stringify(item),
+           muteHttpExceptions: true
+         };
+         var response = UrlFetchApp.fetch(url, options);
+         var res=JSON.parse(response.getContentText());
+         Logger.log(response.getContentText());
+         Logger.log(res);
+         Logger.log("ldlldlldlldld");
+       
+             if(res){
+              var user=retrieveUserData();
+              var value='uploaded:'+user.username;
+              setValueToCell('sector_sub_programs',12,rowNum,value);
+             }   
+        Logger.log(response.getContentText()); // Log the response from the server  
+ });
+}  
+
+function saveProjectPayments() {
+  var newData= fetchPayments();
+  postPaymentData(newData);
+  getMetaData();
+   SpreadsheetApp.getActiveSpreadsheet().toast('Payment List Uploaded', 'Message', 3000);
+ }
+
+
+function fetchPayments() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('payments');
+  var range = sheet.getDataRange();
+  //var range = sheet.getRange("A1:X1");
+  var values = range.getValues();
+  var headers = values[0];
+  var dataArray = [];
+  // Iterate over each row starting from the second row (index 1)
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+    var dataObject = {};
+    // Iterate over each column
+    for (var j = 0; j < headers.length; j++) {
+      var header = headers[j];
+      var value = row[j];
+      dataObject[header] =  value ;
+    }
+    dataObject["spRowNumber"] =  i ;
+    
+    
+    if(!isEmpty(dataObject.ProjectID) && !isEmpty(dataObject.StatusUpdate) && isNotUploaded(dataObject.StatusUpdate))
+    dataArray.push(dataObject);
+  }
+  return dataArray;
+}
+
+
+function postPaymentData(data) {
+  data.forEach(function(item, index) {
+   item["ProductService"]=68120; 
+   item["Staging"] =  "Payment";
+   item["CertificateID"] =  "17";
+    var rowNum=2;
+    var cItem=item;
+    if(cItem.spRowNumber) rowNum=cItem.spRowNumber+1;
+   var url = SERVER+"project/payments";
+     var options = {
+           headers: HEADERS,
+           method: "post",
+           contentType: "application/json",
+           payload: JSON.stringify(item),
+           muteHttpExceptions: true
+         };
+         var response = UrlFetchApp.fetch(url, options);
+         var res=JSON.parse(response.getContentText());
+       
+             if(res){
+             // var value='uploaded:'+ res.result.insertId;
+
+              var user=retrieveUserData();
+              var value='uploaded:'+user.username;
+              setValueToCell('payments',10,rowNum,value);
+             }   
+        Logger.log(response.getContentText()); // Log the response from the server  
+ });
+} 
+
+function addProjectPayments(){
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("payments");
+    sheet.getRange("A1:N1").setValues([[
+        "Project",
+        "ProjectStatus",
+        "ProgressStatus",
+        "Contractor",
+        "PaymentType",
+        "AmountPaid",
+        "PercPaid",
+        "IFMISID",
+        "PaymentNumber",
+        "TransactionID",        
+        "TransactionDetails",
+        "PaymentRemarks",
+        "PaymentDate",
+        "StatusUpdate"
+      ]]);
+
+}
+
+
+
+function getEditedValue(editedColumn,editedColumn){
+  editedColumn
+}
+
+function getCellRefByColumn(editedColumn){
+
+  var cellRef='';
+  switch(editedColumn){
+    case 	1: cellRef="A";
+    break;
+   case 	2: cellRef="B";  
+    break;
+   case 	3: cellRef="C";
+    break;
+   case 	4: cellRef="D";
+    break;
+   case 	5: cellRef="E";
+    break;
+   case 	6: cellRef="F";
+    break;
+   case 	7: cellRef="G";
+    break;
+   case 	8: cellRef="H";
+    break;
+   case 	9: cellRef="I";
+    break;
+   case 	10: cellRef="J";
+    break;
+   case 	11: cellRef="K";
+    break;
+   case 	12: cellRef="L";
+    break;
+   case 	13: cellRef="M";
+    break;
+   case 	14: cellRef="N";
+    break;
+   case 	15: cellRef="O";
+    break;
+   case 	16: cellRef="P";
+    break;
+   case 	17: cellRef="Q";
+    break;
+   case 	18: cellRef="R";
+    break;
+   case 	19: cellRef="S";
+    break;
+   case 	20: cellRef="T";
+    break;
+   case 	21: cellRef="U";
+    break;
+   case 	22: cellRef="V";
+    break;
+   case 	23: cellRef="W";
+    break;
+    case 	24: cellRef="X";
+    break;
+    case 	25: cellRef="Y";
+    break;
+    case 	26: cellRef="Z";
+    break;
+
+  }
+  return cellRef;
+}
+function getValueByColRow(sheet,editedColumn,editedRow){
+ 
+  var cellRef= getCellRefByColumn(editedColumn);
+  var ref= cellRef+editedRow;
+  console.log(editedColumn+'====---------refrefref===='+ref)
+  var editedCell= sheet.getRange(ref);
+  return  editedCell.getValue();
+  
+  }
+
+
+  function filterTargetColumn(sheet,strKey, dataSourceRange,filterCln,rtnValue,dropColumn,dropRow) {
+       // Check if the edited cell is in the category column (e.g., column A)
+     var dataRange = sheet.getRange(dataSourceRange);// Assuming data starts from row 2
+      var data = dataRange.getValues();
+ 
+      var cellRef= getCellRefByColumn(dropColumn);
+      var ref= cellRef+dropRow
+      var dropTargetCell= sheet.getRange(ref);
+    
+      var filteredItems = data.filter(function(row) {
+        console.log(row[filterCln]+'UUUUUUUUUUUUUU^^^^^^^^^^^^^^^^^^^^^^^^^^^===='+strKey+'filterCln='+filterCln)
+        console.log(row)
+        return row[filterCln] == strKey;
+      }).map(function(row) {
+        return row[rtnValue];
+      });
+
+     Logger.log('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'+strKey)
+     Logger.log(filteredItems)
+
+      // Set data validation for the items column with the filtered items
+      var rule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(filteredItems)
+        .build();
+
+        dropTargetCell.clearDataValidations();
+        dropTargetCell.setDataValidation(rule);
+        
+    
+  }
+
+  
+  function filterTargetCIDPAdp(sheet,strKey, dataSourceRange,dropColumn,dropRow) {
+    // Check if the edited cell is in the category column (e.g., column A)
+  var dataRange = sheet.getRange(dataSourceRange);// Assuming data starts from row 2
+   var data = dataRange.getValues();
+
+   var cellRef= getCellRefByColumn(dropColumn);
+   var ref= cellRef+dropRow
+   var dropTargetCell= sheet.getRange(ref);
+
+    
+   var filteredItems = compareFYCIDP(strKey,data)
+   Logger.log(data)
+   // Set data validation for the items column with the filtered items
+   var rule = SpreadsheetApp.newDataValidation()
+     .requireValueInList(filteredItems)
+     .build();
+
+     dropTargetCell.clearDataValidations();
+
+     dropTargetCell.setDataValidation(rule);
+     
+ 
+}
+
+function compareFYCIDP(cidp,yrs) {
+  console.log("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCC=="+cidp)
+  console.log(yrs)
+  console.log("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCC")
+  //cidp=cidp.replace('CIDP:','');
+  var  cidpStart=  cidp.substring(5,9);
+  var  cidpEnd=    cidp.substring(10,15);
+  console.log(cidpStart+'==xxxxxxCIDPxxxxxxx'+cidp+'=='+cidpEnd);
+  var c=cidp.split('-');
+  var foundYrs=[];
+  yrs.forEach( (row) =>{
+
+    if(row){
+      console.log('xxxxxxxxxxxxx'+row)
+      var  yearStart= row[0].replace(' ','');
+      //FY2023-2024
+      yearStart=yearStart.substring(2, 6);
+      var  yearEnd= row[0].replace(' ','');
+      yearEnd=yearEnd.substring(7,11);
+      console.log(yearStart+'==xxxxxxxxxxxxx'+row+'=='+yearEnd);
+      var isValid=comparePeriod(cidpStart,cidpEnd,yearStart,yearEnd);
+         if(isValid==true) foundYrs.push(row);
+
+    }
+   
+  });
+  console.log('xxxxxxxxxxxxx----------')
+  console.log(foundYrs)
+  console.log('xxxxxxxxxxxxx----------')
+  return [... new Set(foundYrs.sort())];
+}
+//2013-2017  2017-2018
+function comparePeriod(cidpStart,cidpEnd,yearStart,YearEnd){
+  if(yearStart*1>=cidpStart*1 && YearEnd*1<=cidpEnd*1){
+          console.log(cidpStart,cidpEnd,yearStart,YearEnd)
+ return true;
+}
+return false;
+}
+  
+  function filterDropDownBy(e) {
+    var sheet = e.source.getActiveSheet();
+    var editedCell = e.range;
+    var editedRow = editedCell.getRow();
+    var editedColumn = editedCell.getColumn() ;
+    var editedsheet =editedCell.getSheet().getSheetName(); 
+  
+    var editedValue = getValueByColRow(sheet,editedColumn,editedRow);
+  
+    // CIDP
+
+   // addDataValidationWithFixedValues(sheet,dropColumn,rowNum)
+
+    if(editedsheet=="projects" && editedColumn==1){
+    Logger.log("CIDP:   "+editedValue)
+    var DrcellRef= getCellRefByColumn(2);
+    var Drref= DrcellRef+editedRow;
+    var dropTargetCell= sheet.getRange(Drref);
+    setCellState(dropTargetCell, 'Pending')
+
+   var findProjectTypeKey=getValueByColRow(sheet,1,editedRow);
+   // 9 dropdwon for milestone
+   // filterTargetColumn(sheet,findProjectTypeKey, 'sect_sub_programs!A2:E1000',4,0,4,editedRow);
+    filterTargetCIDPAdp(sheet,editedValue, 'financial_year!A2:A55',2,editedRow)
+    Utilities.sleep(30);
+    setCellState(dropTargetCell, 'Done')  
+    }     
+   
+     // FinYear
+
+     if(editedsheet=="projects" && editedColumn==2 && editedRow==2){
+      var findProjectTypeKey=getValueByColRow(sheet,2,editedRow);
+      // filterTargetByFixedCell(sheet,strKey, dataSourceRange,filterCln,rtnValue,dropColumn,startRow) 
+
+
+       
+    
+      var DrcellRef= getCellRefByColumn(2);
+     var Drref= DrcellRef+3;
+     var dropTargetCell= sheet.getRange(Drref);
+     setCellState(dropTargetCell, 'Pending')
+
+
+    // 9 dropdwon for milestone
+     filterTargetByFixedCell(sheet,findProjectTypeKey, 'sector_programs!A2:E1000',4,0,3,6,1000)
+     filterTargetByFixedCell(sheet,findProjectTypeKey, 'dept_directorates!A2:C63',2,0,2,3,3)
+     //filterTargetColumn(sheet,strKey, dataSourceRange,filterCln,rtnValue,dropColumn,dropRow)
+     Utilities.sleep(30);
+     setCellState(dropTargetCell, 'Done')
+
+     }
+
+    
+
+     if(editedsheet=="projects" && editedColumn==3){
+     Logger.log("Strategies:   "+editedValue)
+  
+     var DrcellRef= getCellRefByColumn(4);
+     var Drref= DrcellRef+editedRow;
+     var dropTargetCell= sheet.getRange(Drref);
+     setCellState(dropTargetCell, 'Pending')
+
+    var findProjectTypeKey=getValueByColRow(sheet,3,editedRow);
+    // 9 dropdwon for milestone
+     filterTargetColumn(sheet,findProjectTypeKey, 'sect_sub_programs!A2:E1000',4,0,4,editedRow);
+     //filterTargetColumn(sheet,strKey, dataSourceRange,filterCln,rtnValue,dropColumn,dropRow)
+     Utilities.sleep(30);
+     setCellState(dropTargetCell, 'Done')
+
+
+     }
+
+
+
+     
+       /*
+  
+  CIDPID 24 	FinYearID 25
+  StrategyID 26	SubProgrammeID 27	 4
+  TypeID 28	    ProjStatus 29 9
+  SubCountyID 31	WardID 32  17
+  StrategyID 26 AA2
+  filterTargetColumn(sheet,strKey, dataSourceRange,filterCln,rtnValue,dropColumn,dropRow) 
+  */
+        // ProjectType
+        
+    if(editedsheet=="projects" && editedColumn==5){
+          addDataValidationWithFixedValues(sheet,7,editedRow);
+    }
+        
+    if(editedsheet=="projects" && editedColumn==8){
+      var DrcellRef= getCellRefByColumn(9);
+      var Drref= DrcellRef+editedRow;
+      var dropTargetCell= sheet.getRange(Drref);
+      setCellState(dropTargetCell, 'Pending')
+
+     var findProjectTypeKey=getValueByColRow(sheet,8,editedRow);
+     // 9 dropdwon for milestone
+      filterTargetColumn(sheet,findProjectTypeKey, 'BoQ_phase_milestones!A2:F1000',5,0,9,editedRow);
+      //filterTargetColumn(sheet,strKey, dataSourceRange,filterCln,rtnValue,dropColumn,dropRow)
+      Utilities.sleep(30);
+      setCellState(dropTargetCell, 'Done')
+    }
+  
+  
+    if(editedsheet=="projects" && editedColumn==16){
+      Logger.log('Subcounties'+   editedValue)
+       var DrcellRef= getCellRefByColumn(17);
+      var Drref= DrcellRef+editedRow;
+      var dropTargetCell= sheet.getRange(Drref);
+      setCellState(dropTargetCell, 'Pending'); 
+     var findProjectTypeKey=getValueByColRow(sheet,16,editedRow);
+      filterTargetColumn(sheet,findProjectTypeKey, 'wards!A2:E1000',3,0,17,editedRow);
+      Utilities.sleep(30);
+      setCellState(dropTargetCell, 'Done')
+     }
+
+
+
+
+    
+  
+  
+  }
+  
+
+  function filterTargetByFixedCell(sheet,strKey, dataSourceRange,filterCln,rtnValue,dropColumn,startRow,rowsToAddRule) {
+    // Check if the edited cell is in the category column (e.g., column A)
+  var dataRange = sheet.getRange(dataSourceRange);// Assuming data starts from row 2
+   var data = dataRange.getValues();
+   
+   Logger.log('dataSourceRange0000000000000000000000000000000000000===')
+   Logger.log(data)
+   Logger.log(dataSourceRange)
+   var filteredItems = data.filter(function(row) {
+
+   
+    Logger.log(rtnValue+'=====PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP=='+ row[filterCln])
+Logger.log(row)
+Logger.log('PPPPPPP^^^^^^^^^^^^^^^^^^^^^^^^^^^^PPPPPPPPPP======'+strKey)
+     return row[filterCln] == strKey;
+   }).map(function(row) {
+     return row[rtnValue];
+   });
+
+   
+
+
+   // Set data validation for the items column with the filtered items
+   var rule = SpreadsheetApp.newDataValidation()
+     .requireValueInList(filteredItems)
+     .build();
+
+     var cellRef= getCellRefByColumn(dropColumn);
+     var ref= cellRef+startRow+':'+cellRef+rowsToAddRule;
+     var dropTargetCell= sheet.getRange(ref);
+
+     
+     dropTargetCell.clearDataValidations();
+
+     dropTargetCell.setDataValidation(rule);
+     
+}
+
+function setCellState(targetCell, type){
+  Logger.log(" targetCell.setValue('');"+targetCell.getValue())
+  if(type=='Pending'){
+  targetCell.setValue('');
+  targetCell.setBackground('#d8d8d8');
+   } else if(type=='Done'){
+    targetCell.setBackground('#fff')
+   }
+}
+
+
+function addDataValidationWithFixedValues(sheet,dropColumn,rowNum) {
+  var cellRef= getCellRefByColumn(dropColumn);
+  cellRef=cellRef+rowNum;
+  // Define the fixed set of values for data validation
+  var allowedValues = ["True", "False"];
+  
+  // Create a data validation rule based on the fixed set of values
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(allowedValues)
+    .setAllowInvalid(false) // Prevent invalid entries
+    .build();
+  
+  // Apply the data validation rule to cell A1
+  var cellWithValidation = sheet.getRange(cellRef);
+  cellWithValidation.setDataValidation(rule);
 }
